@@ -142,7 +142,7 @@ func TrainingInfo(data string, weight, height float64) (string, error) {
 		}
 	default:
 		log.Printf("error: unknown activity type: %q", activityType)
-		return "", fmt.Errorf("unknown activity type")
+		return "", fmt.Errorf("неизвестный тип тренировки")
 	}
 
 	dist := distance(steps, height)
