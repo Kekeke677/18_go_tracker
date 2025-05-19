@@ -1,7 +1,6 @@
 package daysteps
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -23,25 +22,34 @@ func parsePackage(data string) (int, time.Duration, error) {
 	parts := strings.Split(data, ",")
 
 	if len(parts) != 2 {
-		log.Println("Ошибка: неверный формат строки (шаги,время)")
-		return 0, 0, errors.New("Неправильный формат: шаги, время")
+		log.Printf("error: invalid format for string (steps,time): %q", data)
+		return 0, 0, fmt.Errorf("invalid format: expected steps,time")
 	}
 
 	steps, err := strconv.Atoi(parts[0])
 	if err != nil {
-		log.Println("Ошибка: некорректное количество шагов")
-		return 0, 0, errors.New("invalid steps: " + err.Error())
+		log.Printf("error: invalid steps value: %q, %v", parts[0], err)
+		return 0, 0, fmt.Errorf("invalid steps value: %w", err)
 	}
 
 	if steps <= 0 {
-		log.Println("Ошибка: некорректное количество шагов")
-		return 0, 0, errors.New("некорректное количество шагов")
+		log.Printf("error: steps must be positive: %d", steps)
+		return 0, 0, fmt.Errorf("steps must be positive")
 	}
 
 	duration, err := time.ParseDuration(parts[1])
 	if err != nil {
-		log.Println("Ошибка: некорректная продолжительность тренировки")
-		return 0, 0, errors.New("некорректная продолжительность: " + err.Error())
+		log.Printf("error: invalid duration: %q, %v", parts[1], err)
+		return 0, 0, fmt.Errorf("invalid duration: %w", err)
+	}
+	if duration == 0 {
+		log.Printf("error: duration cannot be zero: %q", parts[1])
+		return 0, 0, fmt.Errorf("duration cannot be zero")
+	}
+
+	if duration < 0 {
+		log.Printf("error: duration cannot be negative: %q", parts[1])
+		return 0, 0, fmt.Errorf("duration cannot be negative")
 	}
 
 	return steps, duration, nil
@@ -52,10 +60,6 @@ func DayActionInfo(data string, weight, height float64) string {
 	steps, duration, err := parsePackage(data)
 	if err != nil {
 		log.Println(err)
-		return ""
-	}
-
-	if steps <= 0 {
 		return ""
 	}
 

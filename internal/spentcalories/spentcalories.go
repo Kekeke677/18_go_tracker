@@ -1,8 +1,8 @@
 package spentcalories
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -18,29 +18,39 @@ const (
 )
 
 func parseTraining(data string) (int, string, time.Duration, error) {
-	// Разделяем строку на слайс строк
+
 	parts := strings.Split(data, ",")
 
 	if len(parts) != 3 {
-		return 0, "", 0, errors.New("неправильный формат: шаги, акитвность, время")
+		log.Printf("error: invalid format for string (steps,activity,time): %q", data)
+		return 0, "", 0, fmt.Errorf("invalid format: expected steps,activity,time")
 	}
 
 	steps, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return 0, "", 0, errors.New("invalid steps: " + err.Error())
+		log.Printf("error: invalid steps value: %q, %v", parts[0], err)
+		return 0, "", 0, fmt.Errorf("invalid steps value: %w", err)
 	}
 
 	if steps <= 0 {
-		return 0, "", 0, errors.New("шаги должны быть больше нуля")
+		log.Printf("error: steps must be positive: %d", steps)
+		return 0, "", 0, fmt.Errorf("steps must be positive")
 	}
 
 	duration, err := time.ParseDuration(parts[2])
 	if err != nil {
-		return 0, "", 0, errors.New("invalid duration: " + err.Error())
+		log.Printf("error: invalid duration: %q, %v", parts[2], err)
+		return 0, "", 0, fmt.Errorf("invalid duration: %w", err)
+	}
+
+	if duration == 0 {
+		log.Printf("error: duration cannot be zero: %q", parts[2])
+		return 0, "", 0, fmt.Errorf("duration cannot be zero")
 	}
 
 	if duration < 0 {
-		return 0, "", 0, errors.New("Продолжительность должна быть больше нуля")
+		log.Printf("error: duration cannot be negative: %q", parts[2])
+		return 0, "", 0, fmt.Errorf("duration cannot be negative")
 	}
 
 	return steps, parts[1], duration, nil
@@ -59,7 +69,6 @@ func meanSpeed(steps int, height float64, duration time.Duration) float64 {
 	}
 
 	dist := distance(steps, height)
-
 	durationHours := duration.Hours()
 	return dist / durationHours
 }
@@ -67,16 +76,16 @@ func meanSpeed(steps int, height float64, duration time.Duration) float64 {
 func RunningSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
 
 	if steps <= 0 {
-		return 0, errors.New("шаги должны быть больше нуля")
+		return 0, fmt.Errorf("steps must be positive")
 	}
 	if weight <= 0 {
-		return 0, errors.New("вес должен быть больше нуля")
+		return 0, fmt.Errorf("weight must be positive")
 	}
 	if height <= 0 {
-		return 0, errors.New("росто должен быть больше нуля")
+		return 0, fmt.Errorf("height must be positive")
 	}
 	if duration <= 0 {
-		return 0, errors.New("продолжительность тренировки должна быть больше нуля")
+		return 0, fmt.Errorf("duration must be positive")
 	}
 
 	meanSpeed := meanSpeed(steps, height, duration)
@@ -88,16 +97,16 @@ func RunningSpentCalories(steps int, weight, height float64, duration time.Durat
 
 func WalkingSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
 	if steps <= 0 {
-		return 0, errors.New("шаги должны быть больше нуля")
+		return 0, fmt.Errorf("steps must be positive")
 	}
 	if weight <= 0 {
-		return 0, errors.New("вес должен быть больше нуля")
+		return 0, fmt.Errorf("weight must be positive")
 	}
 	if height <= 0 {
-		return 0, errors.New("рост должен быть больше нуля")
+		return 0, fmt.Errorf("height must be positive")
 	}
 	if duration <= 0 {
-		return 0, errors.New("продолжительность тренировки должна быть больше нуля")
+		return 0, fmt.Errorf("duration must be positive")
 	}
 
 	meanSpeed := meanSpeed(steps, height, duration)
@@ -110,6 +119,7 @@ func WalkingSpentCalories(steps int, weight, height float64, duration time.Durat
 func TrainingInfo(data string, weight, height float64) (string, error) {
 	steps, activityType, duration, err := parseTraining(data)
 	if err != nil {
+		log.Printf("error: failed to parse training data: %v", err)
 		return "", err
 	}
 
@@ -120,16 +130,19 @@ func TrainingInfo(data string, weight, height float64) (string, error) {
 		activityName = "Ходьба"
 		calories, err = WalkingSpentCalories(steps, weight, height, duration)
 		if err != nil {
+			log.Printf("error: failed to calculate walking calories: %v", err)
 			return "", err
 		}
 	case "Бег":
 		activityName = "Бег"
 		calories, err = RunningSpentCalories(steps, weight, height, duration)
 		if err != nil {
+			log.Printf("error: failed to calculate running calories: %v", err)
 			return "", err
 		}
 	default:
-		return "", errors.New("неизвестный тип тренировки")
+		log.Printf("error: unknown activity type: %q", activityType)
+		return "", fmt.Errorf("unknown activity type")
 	}
 
 	dist := distance(steps, height)
